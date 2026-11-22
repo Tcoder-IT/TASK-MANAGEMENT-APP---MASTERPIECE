@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Build
 dist/
@@ -22,6 +23,7 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+.vscode/*.log
 
 # OS
 .DS_Store
