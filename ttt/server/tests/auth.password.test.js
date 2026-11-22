@@ -6,6 +6,7 @@ let mongod;
 let app;
 
 beforeAll(async () => {
+  // Set test environment variables before importing app
   process.env.NODE_ENV = 'test';
   process.env.PORT = '5000';
   process.env.API_VERSION = 'v1';
@@ -39,7 +40,7 @@ afterAll(async () => {
 afterEach(async () => {
   const collections = mongoose.connection.collections;
   for (const key of Object.keys(collections)) {
-    await collections[key].deleteMany({ });
+    await collections[key].deleteMany({});
   }
 });
 

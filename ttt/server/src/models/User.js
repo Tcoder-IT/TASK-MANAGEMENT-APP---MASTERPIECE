@@ -24,6 +24,9 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: true },
   settings: { type: settingsSchema, default: () => ({}) },
   pushSubscriptions: { type: [pushSubscriptionSchema], default: [] },
+  // Password reset fields
+  resetPasswordToken: { type: String, select: false },
+  resetPasswordExpires: { type: Date, select: false },
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

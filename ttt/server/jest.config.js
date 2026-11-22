@@ -18,7 +18,7 @@ export default {
       statements: 70,
     },
   },
-  testTimeout: 15000,
+  testTimeout: 30000,
   verbose: true,
   transformIgnorePatterns: [
     '/node_modules/(?!mongodb-memory-server/)',

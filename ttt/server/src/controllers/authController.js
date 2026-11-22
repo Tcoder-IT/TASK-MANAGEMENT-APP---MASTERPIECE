@@ -7,6 +7,19 @@ import { ApiError } from '../utils/apiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { successResponse } from '../utils/apiResponse.js';
 
+// In production, use a proper email service like SendGrid, Mailgun, etc.
+async function sendResetEmail(email, resetUrl) {
+  // TODO: Implement actual email sending
+  console.log(`Password reset email would be sent to ${email} with link: ${resetUrl}`);
+  // Example with nodemailer:
+  // const transporter = nodemailer.createTransport({ ... });
+  // await transporter.sendMail({
+  //   to: email,
+  //   subject: 'Password Reset Request',
+  //   html: `Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 1 hour.`
+  // });
+}
+
 function generateTokens(user) {
   const accessToken = jwt.sign(
     { id: user._id, jti: crypto.randomUUID() },
@@ -246,4 +259,65 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, { message: 'Account deleted successfully' });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  // Always return success to prevent email enumeration
+  if (!user) {
+    return successResponse(res, { message: 'If the email exists, a reset link has been sent' });
+  }
+
+  // Generate reset token
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+  user.resetPasswordToken = tokenHash;
+  user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await user.save();
+
+  // In production, send email with reset link
+  // For development, return the token in response (remove in production!)
+  const resetUrl = `${env.CORS_ORIGIN}/reset-password?token=${resetToken}`;
+  await sendResetEmail(email, resetUrl);
+
+  return successResponse(res, {
+    message: 'If the email exists, a reset link has been sent',
+    // Only include in non-production environments
+    ...(process.env.NODE_ENV !== 'production' && { devResetToken: resetToken }),
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken: tokenHash,
+    resetPasswordExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    throw new ApiError(400, 'Invalid or expired reset token');
+  }
+
+  user.passwordHash = await User.hashPassword(password);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  // Revoke all refresh tokens
+  await revokeUserRefreshTokens(user._id);
+
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: env.COOKIE_SECURE,
+    sameSite: env.COOKIE_SAME_SITE,
+    domain: env.COOKIE_DOMAIN,
+  });
+
+  return successResponse(res, { message: 'Password has been reset. Please log in with your new password.' });
 });

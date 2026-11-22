@@ -35,3 +35,18 @@ export const updateProfileSchema = z.object({
     reminderOffsets: z.array(z.number().int().min(1).max(10080)).max(10).optional(),
   }),
 });
+
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: z.string().email().toLowerCase().trim(),
+  }),
+});
+
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().min(1),
+    password: z.string().min(8).max(128)
+      .regex(/[A-Za-z]/, 'Password must contain at least one letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+  }),
+});

@@ -6,6 +6,7 @@ let mongod;
 let app;
 
 beforeAll(async () => {
+  // Set test environment variables before importing app
   process.env.NODE_ENV = 'test';
   process.env.PORT = '5000';
   process.env.API_VERSION = 'v1';
@@ -26,18 +27,7 @@ beforeAll(async () => {
   const appModule = await import('../src/app.js');
   app = appModule.app;
 
-  // Retry MongoMemoryServer creation to handle port conflicts
-  let retries = 3;
-  while (retries > 0) {
-    try {
-      mongod = await MongoMemoryServer.create();
-      break;
-    } catch (err) {
-      retries--;
-      if (retries === 0) throw err;
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  }
+  mongod = await MongoMemoryServer.create();
   const uri = mongod.getUri();
   await mongoose.connect(uri);
 });
