@@ -1,6 +1,7 @@
 import { app, connectDB } from './app.js';
 import { env } from './config/env.js';
 import { disconnectDB } from './config/db.js';
+import { startReminderScheduler, stopReminderScheduler } from './services/reminderScheduler.js';
 
 let server;
 
@@ -12,8 +13,13 @@ async function start() {
       console.log(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
     });
 
+    if (env.NODE_ENV !== 'test') {
+      startReminderScheduler();
+    }
+
     const shutdown = async (signal) => {
       console.log(`${signal} received. Shutting down gracefully...`);
+      stopReminderScheduler();
       server.close(async () => {
         await disconnectDB();
         console.log('Server closed');
