@@ -10,6 +10,7 @@ import { globalRateLimiter } from './middleware/rateLimiter.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { connectDB } from './config/db.js';
 import healthRoutes from './routes/health.js';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.get('/', (req, res) => {
 });
 
 app.use(`/api/${env.API_VERSION}/health`, healthRoutes);
+app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
