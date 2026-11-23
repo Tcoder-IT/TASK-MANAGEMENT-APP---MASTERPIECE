@@ -100,7 +100,7 @@ studyflow/
    ```
 
    This starts:
-   - Backend: http://localhost:5000
+   - Backend: http://localhost:5050
    - Frontend: http://localhost:5173
 
 ### Environment Variables (server/.env)
@@ -108,7 +108,7 @@ studyflow/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `5000` |
+| `PORT` | Server port | `5050` |
 | `MONGODB_URI` | MongoDB connection string | Required |
 | `JWT_ACCESS_SECRET` | Access token secret (32+ chars) | Required |
 | `JWT_REFRESH_SECRET` | Refresh token secret (32+ chars) | Required |
