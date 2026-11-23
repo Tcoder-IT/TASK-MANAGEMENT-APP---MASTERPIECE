@@ -1,25 +1,59 @@
 import cron from 'node-cron';
 import Task from '../models/Task.js';
+import User from '../models/User.js';
 import webpush from 'web-push';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 let scheduledJob = null;
+let isPushConfigured = false;
 
 function initWebPush() {
   if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.VAPID_SUBJECT) {
-    webpush.setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+    try {
+      webpush.setVapidDetails(env.VAPID_SUBJECT, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY);
+      isPushConfigured = true;
+      logger.info('Push notifications: VAPID configured successfully');
+    } catch (error) {
+      logger.warn('Push notifications: Failed to configure VAPID', { error: error.message });
+      isPushConfigured = false;
+    }
+  } else {
+    logger.info('Push notifications: VAPID keys not configured, push reminders disabled');
+    isPushConfigured = false;
   }
 }
 
-async function sendPushNotification(subscription, payload) {
+async function removeStaleSubscription(userId, endpoint) {
+  try {
+    await User.findByIdAndUpdate(userId, {
+      $pull: { pushSubscriptions: { endpoint } },
+    });
+    logger.info('Push notifications: Removed stale subscription', { userId, endpoint });
+  } catch (error) {
+    logger.error('Push notifications: Failed to remove stale subscription', { error: error.message, userId, endpoint });
+  }
+}
+
+async function sendPushNotification(subscription, payload, userId) {
+  if (!isPushConfigured) {
+    return { sent: false, reason: 'VAPID not configured' };
+  }
+
   try {
     await webpush.sendNotification(subscription, JSON.stringify(payload));
+    return { sent: true };
   } catch (error) {
     if (error.statusCode === 410 || error.statusCode === 404) {
-      // Subscription expired or invalid - remove it
-      console.warn('Removing invalid push subscription');
+      logger.warn('Push notifications: Subscription expired or invalid, removing', {
+        userId,
+        endpoint: subscription.endpoint,
+      });
+      await removeStaleSubscription(userId, subscription.endpoint);
+      return { sent: false, reason: 'stale_subscription_removed' };
     }
-    console.error('Push notification error:', error.message);
+    logger.error('Push notifications: Send failed', { error: error.message, userId });
+    return { sent: false, reason: error.message };
   }
 }
 
@@ -54,7 +88,7 @@ async function checkAndSendReminders() {
       };
 
       for (const subscription of user.pushSubscriptions) {
-        await sendPushNotification(subscription, payload);
+        await sendPushNotification(subscription, payload, user._id);
       }
     }
   }
@@ -62,7 +96,7 @@ async function checkAndSendReminders() {
 
 export function startReminderScheduler() {
   initWebPush();
-  
+
   if (scheduledJob) {
     scheduledJob.stop();
   }
@@ -72,14 +106,21 @@ export function startReminderScheduler() {
     try {
       await checkAndSendReminders();
     } catch (error) {
-      console.error('Reminder scheduler error:', error);
+      logger.error('Reminder scheduler error:', { error: error.message, stack: error.stack });
     }
   });
+
+  logger.info('Reminder scheduler started');
 }
 
 export function stopReminderScheduler() {
   if (scheduledJob) {
     scheduledJob.stop();
     scheduledJob = null;
+    logger.info('Reminder scheduler stopped');
   }
+}
+
+export function isPushNotificationsEnabled() {
+  return isPushConfigured;
 }

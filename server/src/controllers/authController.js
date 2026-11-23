@@ -6,18 +6,20 @@ import RefreshToken from '../models/RefreshToken.js';
 import { ApiError } from '../utils/apiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { successResponse } from '../utils/apiResponse.js';
+import { sendEmail, isEmailConfigured } from '../services/emailService.js';
+import { logger } from '../utils/logger.js';
 
-// In production, use a proper email service like SendGrid, Mailgun, etc.
 async function sendResetEmail(email, resetUrl) {
-  // TODO: Implement actual email sending
-  console.log(`Password reset email would be sent to ${email} with link: ${resetUrl}`);
-  // Example with nodemailer:
-  // const transporter = nodemailer.createTransport({ ... });
-  // await transporter.sendMail({
-  //   to: email,
-  //   subject: 'Password Reset Request',
-  //   html: `Click <a href="${resetUrl}">here</a> to reset your password. Link expires in 1 hour.`
-  // });
+  const subject = 'Password Reset Request';
+  const html = `
+    <p>You requested a password reset for your StudyFlow account.</p>
+    <p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p>
+    <p>If you didn't request this, please ignore this email.</p>
+  `;
+  const text = `You requested a password reset for your StudyFlow account. Visit ${resetUrl} to reset your password. This link expires in 1 hour.`;
+
+  await sendEmail({ to: email, subject, html, text });
+  logger.info('Password reset email processed', { email, hasEmailConfig: isEmailConfigured() });
 }
 
 function generateTokens(user) {
