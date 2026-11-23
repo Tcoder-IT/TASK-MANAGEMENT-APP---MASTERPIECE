@@ -1,23 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
-import { sessionApi } from '@/api/endpoints';
+import { useQuery } from '@tanstack/react-query';
+import { sessionApi, taskApi, courseApi } from '@/api/endpoints';
 import { Play, Pause, RotateCcw, Settings } from 'lucide-react';
 
 const PRESETS = [
   { label: 'Pomodoro', work: 25, break: 5 },
   { label: 'Short Break', work: 5, break: 1 },
   { label: 'Long Break', work: 15, break: 5 },
-  { label: 'Deep Work', work: 50, break: 10 }
+  { label: 'Deep Work', work: 50, break: 10 },
 ];
 
 export default function Timer() {
   const [mode, setMode] = useState<'work' | 'break'>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [selectedTask] = useState<string | null>(null);
-  const [selectedCourse] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [workDuration, setWorkDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
   const [showSettings, setShowSettings] = useState(false);
+
+  const { data: tasksData } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => taskApi.list({ limit: 100 }),
+  });
+
+  const { data: coursesData } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => courseApi.list(),
+  });
+
+  const tasks = tasksData?.data?.data || [];
+  const courses = coursesData?.data || [];
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -48,7 +62,7 @@ export default function Timer() {
         sessionApi.create({
           task: selectedTask || null,
           course: selectedCourse || null,
-          durationMin: workDuration
+          durationMin: workDuration,
         });
       }
     } else {
@@ -96,6 +110,44 @@ export default function Timer() {
           </div>
           <p className="mt-2 text-gray-500 dark:text-gray-400">{mode === 'work' ? 'Focus on your task' : 'Take a break'}</p>
         </div>
+
+        {mode === 'work' && (tasks.length > 0 || courses.length > 0) && (
+          <div className="mb-6 space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Link Session</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Task (optional)
+                </label>
+                <select
+                  value={selectedTask || ''}
+                  onChange={(e) => setSelectedTask(e.target.value || null)}
+                  className="input"
+                >
+                  <option value="">No task selected</option>
+                  {tasks.map((task: any) => (
+                    <option key={task._id} value={task._id}>{task.title}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Course (optional)
+                </label>
+                <select
+                  value={selectedCourse || ''}
+                  onChange={(e) => setSelectedCourse(e.target.value || null)}
+                  className="input"
+                >
+                  <option value="">No course selected</option>
+                  {courses.map((course: any) => (
+                    <option key={course._id} value={course._id}>{course.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-4">
           <button

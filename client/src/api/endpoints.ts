@@ -24,7 +24,9 @@ export const authApi = {
   getMe: () => api.get<User>('/auth/me'),
   updateProfile: (data: UpdateProfileData) => api.patch<User>('/auth/me', data),
   changePassword: (data: ChangePasswordData) => api.patch('/auth/me/password', data),
-  deleteAccount: () => api.delete('/auth/me')
+  deleteAccount: () => api.delete('/auth/me'),
+  forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) => api.post('/auth/reset-password', { token, password }),
 };
 
 export const courseApi = {

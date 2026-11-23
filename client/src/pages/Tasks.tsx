@@ -1,23 +1,54 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { taskApi } from '@/api/endpoints';
+import { TaskFilters } from '@/components/tasks/TaskFilters';
 import { formatRelativeTime, getPriorityColor, getStatusColor, getTypeColor } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Check, Trash2 } from 'lucide-react';
 
+interface TaskMeta {
+  total: number;
+  pages: number;
+}
+
 export default function Tasks() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => taskApi.list({})
+  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTasks, setTotalTasks] = useState(0);
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['tasks', filters, currentPage],
+    queryFn: () => taskApi.list({ ...filters, page: currentPage, limit: 20 }),
+    placeholderData: (previous) => previous,
   });
 
-  if (isLoading) {
+  const handleFilterChange = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  useEffect(() => {
+    refetch();
+  }, [filters, currentPage, refetch]);
+
+  if (isLoading && !data) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>;
   }
 
   if (error) {
     return <div className="text-center py-8 text-danger-600">Failed to load tasks</div>;
   }
+
+  const tasks = data?.data?.data || [];
+  const meta: TaskMeta = data?.data?.meta || { total: 0, pages: 1 };
+  setTotalTasks(meta.total || 0);
+  setTotalPages(meta.pages || 1);
 
   return (
     <div className="space-y-6">
@@ -30,6 +61,15 @@ export default function Tasks() {
           <span className="mr-2">+</span> New Task
         </Link>
       </div>
+
+      <TaskFilters
+        onFilterChange={handleFilterChange}
+        initialFilters={filters}
+        totalTasks={totalTasks}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+      />
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -45,14 +85,14 @@ export default function Tasks() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {data?.data?.data?.length === 0 ? (
+              {tasks.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-gray-500 dark:text-gray-400">
                     No tasks found. Create your first task!
                   </td>
                 </tr>
               ) : (
-                data?.data?.data?.map((task: any) => (
+                tasks.map((task: any) => (
                   <tr key={task._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="p-4">
                       <div>
