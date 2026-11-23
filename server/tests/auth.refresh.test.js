@@ -1,4 +1,3 @@
-const { startTestMongo } = require('./helpers/mongo');
 import request from 'supertest';
 import mongoose from 'mongoose';
 import RefreshToken from '../src/models/RefreshToken.js';
