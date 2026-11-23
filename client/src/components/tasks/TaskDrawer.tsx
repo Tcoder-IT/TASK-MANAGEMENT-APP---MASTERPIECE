@@ -117,12 +117,8 @@ export function TaskDrawer({ isOpen, onClose, onSubmit, initialData, loading }: 
   }, [initialData, form, defaultValues]);
 
   const handleSubmit = async (data: TaskFormData) => {
-    try {
-      await onSubmit(data);
-      onClose();
-    } catch (error) {
-      // Error handled by onSubmit
-    }
+    await onSubmit(data);
+    onClose();
   };
 
   const { watch, setValue } = form;

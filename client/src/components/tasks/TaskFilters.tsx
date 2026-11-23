@@ -26,6 +26,7 @@ const filterSchema = z.object({
 });
 
 type FilterFormData = z.infer<typeof filterSchema>;
+export type { FilterFormData };
 
 interface TaskFiltersProps {
   onFilterChange: (filters: Partial<FilterFormData>) => void;
