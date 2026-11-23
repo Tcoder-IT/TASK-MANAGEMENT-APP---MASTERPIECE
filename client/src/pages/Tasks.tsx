@@ -1,30 +1,91 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { taskApi } from '@/api/endpoints';
 import { TaskFilters } from '@/components/tasks/TaskFilters';
+import type { FilterFormData } from '@/components/tasks/TaskFilters';
+import { TaskDrawer } from '@/components/tasks/TaskDrawer';
 import { formatRelativeTime, getPriorityColor, getStatusColor, getTypeColor } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Check, Trash2 } from 'lucide-react';
+import { Check, Edit, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import type { CreateTaskData, Task } from '@/types';
 
-interface TaskMeta {
-  total: number;
-  pages: number;
-}
+type TaskFormData = CreateTaskData;
 
 export default function Tasks() {
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [filters, setFilters] = useState<Partial<FilterFormData>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTasks, setTotalTasks] = useState(0);
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useQuery({
     queryKey: ['tasks', filters, currentPage],
     queryFn: () => taskApi.list({ ...filters, page: currentPage, limit: 20 }),
     placeholderData: (previous) => previous,
   });
 
-  const handleFilterChange = (newFilters: Record<string, any>) => {
+  const invalidateTasks = () => {
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['board'] });
+    queryClient.invalidateQueries({ queryKey: ['stats'] });
+  };
+
+  const createMutation = useMutation({
+    mutationFn: (data: TaskFormData) => taskApi.create(data),
+    onSuccess: () => {
+      invalidateTasks();
+      toast.success('Task created');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to create task';
+      toast.error(message);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskData> }) =>
+      taskApi.update(id, data),
+    onSuccess: () => {
+      invalidateTasks();
+      toast.success('Task updated');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to update task';
+      toast.error(message);
+    },
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => taskApi.toggle(id),
+    onSuccess: () => {
+      invalidateTasks();
+      toast.success('Task status updated');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to toggle task';
+      toast.error(message);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => taskApi.delete(id),
+    onSuccess: () => {
+      invalidateTasks();
+      toast.success('Task deleted');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to delete task';
+      toast.error(message);
+    },
+  });
+
+  const handleFilterChange = (newFilters: Partial<FilterFormData>) => {
     setFilters(newFilters);
     setCurrentPage(1);
   };
@@ -34,21 +95,62 @@ export default function Tasks() {
   };
 
   useEffect(() => {
-    refetch();
-  }, [filters, currentPage, refetch]);
+    setTotalTasks(data?.data?.meta?.total ?? 0);
+    setTotalPages(data?.data?.meta?.pages ?? 1);
+  }, [data]);
+
+  const openCreateDrawer = () => {
+    setEditingTask(null);
+    setDrawerOpen(true);
+  };
+
+  const openEditDrawer = (task: Task) => {
+    setEditingTask(task);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerSubmit = async (formData: TaskFormData) => {
+    if (editingTask) {
+      await updateMutation.mutateAsync({ id: editingTask._id, data: formData });
+    } else {
+      await createMutation.mutateAsync(formData);
+    }
+  };
+
+  const handleToggle = async (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation();
+    setActionLoading(taskId);
+    try {
+      await toggleMutation.mutateAsync(taskId);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, taskId: string, taskTitle: string) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${taskTitle}"? This cannot be undone.`)) return;
+    setActionLoading(taskId);
+    try {
+      await deleteMutation.mutateAsync(taskId);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (isLoading && !data) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+      </div>
+    );
   }
 
   if (error) {
     return <div className="text-center py-8 text-danger-600">Failed to load tasks</div>;
   }
 
-  const tasks = data?.data?.data || [];
-  const meta: TaskMeta = data?.data?.meta || { total: 0, pages: 1 };
-  setTotalTasks(meta.total || 0);
-  setTotalPages(meta.pages || 1);
+  const tasks: Task[] = data?.data?.data || [];
 
   return (
     <div className="space-y-6">
@@ -57,9 +159,9 @@ export default function Tasks() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tasks</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your assignments and deadlines</p>
         </div>
-        <Link to="/tasks/new" className="btn-primary">
+        <button onClick={openCreateDrawer} className="btn-primary">
           <span className="mr-2">+</span> New Task
-        </Link>
+        </button>
       </div>
 
       <TaskFilters
@@ -92,11 +194,20 @@ export default function Tasks() {
                   </td>
                 </tr>
               ) : (
-                tasks.map((task: any) => (
-                  <tr key={task._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                tasks.map((task: Task) => (
+                  <tr
+                    key={task._id}
+                    onClick={() => openEditDrawer(task)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
+                  >
                     <td className="p-4">
                       <div>
                         <p className="font-medium text-gray-900 dark:text-white">{task.title}</p>
+                        {task.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                            {task.description}
+                          </p>
+                        )}
                       </div>
                     </td>
                     <td className="p-4 hidden md:table-cell">
@@ -113,25 +224,41 @@ export default function Tasks() {
                       </span>
                     </td>
                     <td className="p-4 hidden lg:table-cell">
-                      <span className={cn(
-                        'font-mono text-sm',
-                        new Date(task.dueDate) < new Date() && task.status !== 'done'
-                          ? 'text-danger-600 dark:text-danger-400'
-                          : 'text-gray-500 dark:text-gray-400'
-                      )}>
+                      <span
+                        className={cn(
+                          'font-mono text-sm',
+                          new Date(task.dueDate) < new Date() && task.status !== 'done'
+                            ? 'text-danger-600 dark:text-danger-400'
+                            : 'text-gray-500 dark:text-gray-400'
+                        )}
+                      >
                         {formatRelativeTime(task.dueDate)}
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          onClick={(e) => handleToggle(e, task._id)}
+                          disabled={actionLoading === task._id}
+                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-success-600 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
                           aria-label={task.status === 'done' ? 'Mark as todo' : 'Mark as done'}
                         >
                           <Check className="h-5 w-5" />
                         </button>
                         <button
-                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-danger-600 dark:hover:bg-gray-800"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDrawer(task);
+                          }}
+                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-gray-800"
+                          aria-label="Edit task"
+                        >
+                          <Edit className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(e, task._id, task.title)}
+                          disabled={actionLoading === task._id}
+                          className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-danger-600 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
                           aria-label="Delete task"
                         >
                           <Trash2 className="h-5 w-5" />
@@ -145,6 +272,17 @@ export default function Tasks() {
           </table>
         </div>
       </div>
+
+      <TaskDrawer
+        isOpen={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false);
+          setEditingTask(null);
+        }}
+        onSubmit={handleDrawerSubmit}
+        initialData={editingTask}
+        loading={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
   );
 }
