@@ -223,7 +223,7 @@ export default function Courses() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                 <Input
                   id="course-name"
-                  value={editingCourse?.name ?? ''}
+                  defaultValue={editingCourse?.name ?? ''}
                   placeholder="Course name"
                   required
                   className="input"
@@ -233,7 +233,7 @@ export default function Courses() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Code (optional)</label>
                 <Input
                   id="course-code"
-                  value={editingCourse?.code ?? ''}
+                  defaultValue={editingCourse?.code ?? ''}
                   placeholder="CS101"
                   className="input"
                   maxLength={20}
@@ -260,7 +260,7 @@ export default function Courses() {
                   <input
                     id="course-color"
                     type="color"
-                    value={editingCourse?.color ?? '#6366f1'}
+                    defaultValue={editingCourse?.color ?? '#6366f1'}
                     className="w-8 h-8 rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer"
                     aria-label="Custom color picker"
                   />

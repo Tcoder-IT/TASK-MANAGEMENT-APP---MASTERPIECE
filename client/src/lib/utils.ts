@@ -8,8 +8,14 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
   if (axios.isAxiosError<ApiError>(error)) {
-    const message = error.response?.data?.message;
+    const apiError = error.response?.data;
+    const message = apiError?.message;
+    const details = apiError?.errors
+      ?.map(({ field, message: detail }) => `${field.replace(/^body\./, '')}: ${detail}`)
+      .join('; ');
+    if (message && details) return `${message}: ${details}`;
     if (message) return message;
+    if (details) return details;
   }
 
   return error instanceof Error ? error.message : fallback;

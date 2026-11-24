@@ -194,9 +194,6 @@ export default function Dashboard() {
       setEditingTask(null);
       toast.success('Task created');
     },
-    onError: () => {
-      toast.error('Failed to create task');
-    },
   });
 
   const updateMutation = useMutation({
@@ -207,9 +204,6 @@ export default function Dashboard() {
       setDrawerOpen(false);
       setEditingTask(null);
       toast.success('Task updated');
-    },
-    onError: () => {
-      toast.error('Failed to update task');
     },
   });
 

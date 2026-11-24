@@ -11,6 +11,23 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(error, 'Request failed')).toBe('Too many authentication attempts');
   });
 
+  it('includes API validation details in the error message', () => {
+    const error = {
+      isAxiosError: true,
+      response: {
+        data: {
+          success: false,
+          message: 'Validation failed',
+          errors: [{ field: 'body.course', message: 'Invalid course ID' }],
+        },
+      },
+    };
+
+    expect(getApiErrorMessage(error, 'Request failed')).toBe(
+      'Validation failed: course: Invalid course ID'
+    );
+  });
+
   it('uses the fallback for non-error values', () => {
     expect(getApiErrorMessage(null, 'Request failed')).toBe('Request failed');
   });

@@ -84,7 +84,7 @@ describe('Task Routes', () => {
       const res = await request(app)
         .post('/api/v1/tasks')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ title: 'No Course Task', dueDate })
+        .send({ title: 'No Course Task', dueDate, course: null })
         .expect(201);
 
       expect(res.body.success).toBe(true);

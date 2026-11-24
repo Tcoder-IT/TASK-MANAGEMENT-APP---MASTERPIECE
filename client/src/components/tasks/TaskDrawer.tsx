@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
 import { Checkbox } from '../ui/Checkbox';
 import { Badge } from '../ui/Badge';
-import { cn } from '../../lib/utils';
+import { cn, getApiErrorMessage } from '../../lib/utils';
 import { courseApi } from '../../api/endpoints';
 import { useQuery } from '@tanstack/react-query';
 import type { Task } from '../../types';
@@ -77,6 +77,7 @@ const reminderOptions = [
 ];
 export function TaskDrawer({ isOpen, onClose, onSubmit, initialData, loading }: TaskDrawerProps) {
   const { data: courses } = useQuery({ queryKey: ['courses'], queryFn: () => courseApi.list() });
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const defaultValues = useMemo<TaskFormData>(() => ({
     title: '',
@@ -98,6 +99,7 @@ export function TaskDrawer({ isOpen, onClose, onSubmit, initialData, loading }: 
   });
 
   useEffect(() => {
+    setSubmitError(null);
     if (initialData) {
       form.reset({
         title: initialData.title,
@@ -114,11 +116,20 @@ export function TaskDrawer({ isOpen, onClose, onSubmit, initialData, loading }: 
     } else {
       form.reset(defaultValues);
     }
-  }, [initialData, form, defaultValues]);
+  }, [isOpen, initialData, form, defaultValues]);
 
   const handleSubmit = async (data: TaskFormData) => {
-    await onSubmit(data);
-    onClose();
+    setSubmitError(null);
+    try {
+      await onSubmit({ ...data, course: data.course || null });
+      onClose();
+    } catch (error: unknown) {
+      setSubmitError(getApiErrorMessage(error, 'Failed to save task. Please try again.'));
+    }
+  };
+
+  const handleClose = () => {
+    if (!loading) onClose();
   };
 
   const { watch, setValue } = form;
@@ -173,7 +184,7 @@ export function TaskDrawer({ isOpen, onClose, onSubmit, initialData, loading }: 
 return (
     <Drawer
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={isEditMode ? 'Edit Task' : 'New Task'}
       description={isEditMode ? 'Update your task details' : 'Create a new task to track your work'}
       size="lg"
@@ -346,13 +357,18 @@ return (
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={loading}>
             Cancel
           </Button>
           <Button type="submit" loading={loading}>
             {isEditMode ? 'Save Changes' : 'Create Task'}
           </Button>
         </div>
+        {submitError && (
+          <p className="rounded-lg border border-danger-300 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-800 dark:bg-danger-950/30 dark:text-danger-300" role="alert">
+            {submitError}
+          </p>
+        )}
       </form>
     </Drawer>
   );

@@ -67,10 +67,6 @@ export default function Tasks() {
       invalidateTasks();
       toast.success('Task created');
     },
-    onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Failed to create task';
-      toast.error(message);
-    },
   });
 
   const updateMutation = useMutation({
@@ -79,10 +75,6 @@ export default function Tasks() {
     onSuccess: () => {
       invalidateTasks();
       toast.success('Task updated');
-    },
-    onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Failed to update task';
-      toast.error(message);
     },
   });
 
