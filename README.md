@@ -68,6 +68,10 @@ studyflow/
 └── README.md
 ```
 
+## Current Project Status
+
+The current implementation, completed work, validation results, known risks, and production-readiness checklist are documented in [PROJECT_STATUS.md](PROJECT_STATUS.md). The requirements checklist is in [docs/MATRIX.md](docs/MATRIX.md).
+
 ## Getting Started
 
 ### Prerequisites
@@ -146,15 +150,14 @@ npm run build
 
 ## Roadmap
 
-- [x] **P1** - Backend foundation (Express, MongoDB, env validation, health check)
-- [x] **P2** - Auth system (JWT, register, login, refresh, logout, profile, password)
-- [x] **P3** - Task & Course CRUD (tasks, courses, filtering, pagination)
-- [x] **P4** - Stats, Sessions, Reminders (dashboard stats, Pomodoro, web push)
-- [ ] **P5** - Frontend polish (UI/UX, accessibility, responsive)
-- [ ] **P6** - Study Groups (create/join groups, shared tasks)
-- [ ] **P7** - Real-time (WebSocket for live updates)
-- [ ] **P8** - PWA & Mobile (offline support, installable)
-- [ ] **P9** - Analytics & Reports (export, insights)
+- [x] Backend foundation, authentication, task/course APIs, and study-session APIs
+- [x] Main client pages: dashboard, tasks, board, calendar, courses, timer, and settings
+- [x] Dashboard API integration and safe local demo-data seeding
+- [x] PWA manifest/service-worker configuration and basic client/server tests
+- [ ] Production-readiness work: CI verification, token-storage decision, browser testing, accessibility/performance checks, and deployment
+- [ ] Study groups and shared resources
+- [ ] Real-time collaboration
+- [ ] Advanced analytics and reports
 
 ## License
 
