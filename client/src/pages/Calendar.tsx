@@ -61,7 +61,7 @@ export default function Calendar() {
     queryFn: () => courseApi.list(),
   });
 
-  const tasks: Task[] = tasksResponse?.data?.data ?? [];
+  const tasks: Task[] = tasksResponse?.data.data ?? [];
   const courses: Course[] = coursesResponse?.data.data ?? [];
 
   const invalidateAll = () => {

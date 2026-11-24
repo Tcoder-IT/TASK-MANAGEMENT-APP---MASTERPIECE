@@ -73,7 +73,7 @@ export const quickAddTaskSchema = z.object({
 
 export const listTasksQuerySchema = z.object({
   query: z.object({
-    status: z.enum(taskStatusEnum).optional(),
+    status: z.enum([...taskStatusEnum, 'active']).optional(),
     priority: z.enum(taskPriorityEnum).optional(),
     type: z.enum(taskTypeEnum).optional(),
     course: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),

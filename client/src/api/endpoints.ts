@@ -52,7 +52,10 @@ export const taskApi = {
     page?: number;
     limit?: number;
     archived?: boolean;
-  }) => api.get<PaginatedResponse<Task>>('/tasks', { params }),
+  }) =>
+    api.get<ApiResponse<Task[]> & { meta: PaginatedResponse<Task>['meta'] }>('/tasks', {
+      params,
+    }),
   getBoard: () => api.get<{ data: Task[]; meta: { total: number; cap: number; capReached: boolean } }>('/tasks/board'),
   create: (data: CreateTaskData) => api.post<Task>('/tasks', data),
   quickAdd: (title: string) => api.post<Task>('/tasks/quick', { title }),
@@ -66,9 +69,15 @@ export const taskApi = {
 };
 
 export const statsApi = {
-  getSummary: () => api.get<StatsSummary>('/stats/summary'),
-  getTasksCompletedPerDay: (days?: number) => api.get<{ tasksCompletedPerDay: { date: string; count: number }[] }>(`/stats/tasks-completed${days ? `?days=${days}` : ''}`),
-  getTasksByStatus: () => api.get<{ tasksByStatus: { status: string; count: number; label: string }[] }>('/stats/tasks-by-status'),
+  getSummary: () => api.get<ApiResponse<StatsSummary>>('/stats/summary'),
+  getTasksCompletedPerDay: (days?: number) =>
+    api.get<ApiResponse<{ tasksCompletedPerDay: { date: string; count: number }[] }>>(
+      `/stats/tasks-completed${days ? `?days=${days}` : ''}`
+    ),
+  getTasksByStatus: () =>
+    api.get<ApiResponse<{ tasksByStatus: { status: string; count: number; label: string }[] }>>(
+      '/stats/tasks-by-status'
+    ),
 };
 
 export const sessionApi = {

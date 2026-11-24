@@ -82,8 +82,6 @@ export interface StatsSummary {
   courseProgress: CourseProgress[];
   studyChart: { date: string; minutes: number }[];
   studyTimePerCourse: { courseId: string; courseName: string; courseColor: string; minutes: number }[];
-  tasksCompletedPerDay: { date: string; count: number }[];
-  tasksByStatus: { status: string; count: number; label: string }[];
 }
 
 export interface CourseProgress {

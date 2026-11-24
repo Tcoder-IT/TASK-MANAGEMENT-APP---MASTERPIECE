@@ -127,6 +127,17 @@ npm run test --workspace=server
 npm run test --workspace=client
 ```
 
+### Seed Local Dashboard Demo Data
+
+The dashboard seed creates an isolated `demo@studyflow.local` account with synthetic courses, tasks, and study sessions. It only permits the local MongoDB database named `studyflow`; it does not delete existing data. Set a private demo password before running it:
+
+```powershell
+$env:DEMO_SEED_PASSWORD = "choose-a-private-password"
+npm run seed:dashboard --workspace=server
+```
+
+Sign in with `demo@studyflow.local` and the password you set. The seed can be run again safely to refresh its demo records.
+
 ### Building for Production
 
 ```bash

@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "lint": "eslint src --ext .js",
     "test": "jest --runInBand --forceExit --watchAll=false",
+    "seed:dashboard": "node scripts/seed-dashboard-demo.js",
     "test:watch": "jest --watch"
   },
   "dependencies": {

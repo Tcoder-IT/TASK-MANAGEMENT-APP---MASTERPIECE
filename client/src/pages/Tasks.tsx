@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { taskApi } from '@/api/endpoints';
 import { TaskFilters } from '@/components/tasks/TaskFilters';
 import type { FilterFormData } from '@/components/tasks/TaskFilters';
@@ -12,8 +13,26 @@ import type { CreateTaskData, Task } from '@/types';
 
 type TaskFormData = CreateTaskData;
 
+function getInitialFilters(searchParams: URLSearchParams): Partial<FilterFormData> {
+  const filters: Partial<FilterFormData> = {};
+  const status = searchParams.get('status');
+  const dueWindow = searchParams.get('dueWindow');
+
+  if (status === 'todo' || status === 'in_progress' || status === 'done' || status === 'active') {
+    filters.status = status;
+  }
+  if (dueWindow === 'overdue' || dueWindow === 'today' || dueWindow === 'week') {
+    filters.dueWindow = dueWindow;
+  }
+
+  return filters;
+}
+
 export default function Tasks() {
-  const [filters, setFilters] = useState<Partial<FilterFormData>>({});
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<Partial<FilterFormData>>(() =>
+    getInitialFilters(searchParams)
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalTasks, setTotalTasks] = useState(0);
@@ -26,7 +45,13 @@ export default function Tasks() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tasks', filters, currentPage],
-    queryFn: () => taskApi.list({ ...filters, page: currentPage, limit: 20 }),
+    queryFn: () => {
+      const params = { ...filters, page: currentPage, limit: 20 };
+      for (const key of ['search', 'status', 'priority', 'type', 'course', 'tag', 'dueWindow'] as const) {
+        if (params[key] === '') delete params[key];
+      }
+      return taskApi.list(params);
+    },
     placeholderData: (previous) => previous,
   });
 
@@ -95,8 +120,8 @@ export default function Tasks() {
   };
 
   useEffect(() => {
-    setTotalTasks(data?.data?.meta?.total ?? 0);
-    setTotalPages(data?.data?.meta?.pages ?? 1);
+    setTotalTasks(data?.data.meta.total ?? 0);
+    setTotalPages(data?.data.meta.pages ?? 1);
   }, [data]);
 
   const openCreateDrawer = () => {
@@ -150,7 +175,7 @@ export default function Tasks() {
     return <div className="text-center py-8 text-danger-600">Failed to load tasks</div>;
   }
 
-  const tasks: Task[] = data?.data?.data || [];
+  const tasks: Task[] = data?.data.data || [];
 
   return (
     <div className="space-y-6">

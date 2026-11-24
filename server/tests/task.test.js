@@ -130,5 +130,27 @@ describe('Task Routes', () => {
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].priority).toBe('high');
     });
+
+    it('should filter active tasks without including completed tasks', async () => {
+      const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await request(app)
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'In progress task', dueDate, status: 'in_progress' });
+      await request(app)
+        .post('/api/v1/tasks')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ title: 'Completed task', dueDate, status: 'done' });
+
+      const res = await request(app)
+        .get('/api/v1/tasks?status=active')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(res.body.data).toHaveLength(3);
+      expect(res.body.data.every((task) => task.status !== 'done')).toBe(true);
+      expect(res.body.meta.total).toBe(3);
+    });
+
   });
 });

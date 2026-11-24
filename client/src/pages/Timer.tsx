@@ -40,7 +40,7 @@ export default function Timer() {
     queryFn: () => courseApi.list(),
   });
 
-  const tasks = tasksData?.data?.data || [];
+  const tasks = tasksData?.data.data || [];
   const courses = coursesData?.data.data || [];
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

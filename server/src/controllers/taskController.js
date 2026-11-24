@@ -15,7 +15,9 @@ function buildFilter(userId, query) {
     filter.archived = false;
   }
 
-  if (query.status) filter.status = query.status;
+  const statusFilter =
+    query.status === 'active' ? { $in: ['todo', 'in_progress'] } : query.status;
+  if (statusFilter) filter.status = statusFilter;
   if (query.priority) filter.priority = query.priority;
   if (query.type) filter.type = query.type;
   if (query.course) filter.course = query.course;
@@ -29,7 +31,12 @@ function buildFilter(userId, query) {
 
     if (query.dueWindow === 'overdue') {
       filter.dueDate = { $lt: now };
-      filter.status = { $ne: 'done' };
+      if (query.status) {
+        filter.$and = [{ status: statusFilter }, { status: { $ne: 'done' } }];
+        delete filter.status;
+      } else {
+        filter.status = { $ne: 'done' };
+      }
     } else if (query.dueWindow === 'today') {
       filter.dueDate = { $gte: todayStart, $lt: todayEnd };
     } else if (query.dueWindow === 'week') {

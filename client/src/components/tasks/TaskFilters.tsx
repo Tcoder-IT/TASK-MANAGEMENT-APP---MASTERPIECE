@@ -12,7 +12,7 @@ import type { Course } from '../../types';
 
 const filterSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(['todo', 'in_progress', 'done']).optional().or(z.literal('')),
+  status: z.enum(['todo', 'in_progress', 'done', 'active']).optional().or(z.literal('')),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().or(z.literal('')),
   type: z.enum(['assignment', 'exam', 'project', 'lab', 'personal']).optional().or(z.literal('')),
   course: z.string().optional(),
@@ -41,6 +41,7 @@ const statusOptions = [
   { value: '', label: 'All Status' },
   { value: 'todo', label: 'To Do' },
   { value: 'in_progress', label: 'In Progress' },
+  { value: 'active', label: 'Active' },
   { value: 'done', label: 'Done' },
 ];
 

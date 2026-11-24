@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, formatDistanceToNow, isToday, isBefore, startOfDay } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isBefore, parseISO, startOfDay } from 'date-fns';
 import {
   Plus,
   CheckCircle2,
@@ -33,41 +33,11 @@ import { toast } from 'sonner';
 import { statsApi, taskApi, courseApi } from '@/api/endpoints';
 import { useAuth } from '@/features/auth/AuthContext';
 import { TaskDrawer } from '@/components/tasks/TaskDrawer';
-import type { Task, Course } from '@/types';
+import type { Course, StatsSummary, Task } from '@/types';
 
 type CreateTaskPayload = Parameters<typeof taskApi.create>[0];
 type UpdateTaskPayload = Parameters<typeof taskApi.update>[1];
 type DrawerSubmitData = CreateTaskPayload & UpdateTaskPayload;
-
-interface SummaryStats {
-  totalTasks?: number;
-  activeTasks?: number;
-  completedTasks?: number;
-  overdueTasks?: number;
-  dueTodayTasks?: number;
-}
-
-interface CompletedDayPoint {
-  date?: string;
-  label?: string;
-  count?: number;
-  completed?: number;
-}
-
-interface StatusSlice {
-  name?: string;
-  status?: string;
-  count?: number;
-  value?: number;
-}
-
-interface CourseStudyPoint {
-  courseName?: string;
-  name?: string;
-  minutes?: number;
-  hours?: number;
-  totalMinutes?: number;
-}
 
 const DONUT_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 const EMPTY_COURSES: Course[] = [];
@@ -202,12 +172,16 @@ export default function Dashboard() {
     queryFn: () => statsApi.getTasksByStatus(),
   });
 
-  const { data: deadlinesResponse, isLoading: deadlinesLoading } = useQuery({
+  const {
+    data: deadlinesResponse,
+    isLoading: deadlinesLoading,
+    isError: deadlinesError,
+  } = useQuery({
     queryKey: ['tasks', 'dashboard-deadlines'],
     queryFn: () => taskApi.list({ limit: 15, sort: 'dueDate', order: 'asc' }),
   });
 
-  const { data: coursesResponse } = useQuery({
+  const { data: coursesResponse, isError: coursesError } = useQuery({
     queryKey: ['courses'],
     queryFn: () => courseApi.list(),
   });
@@ -256,51 +230,36 @@ export default function Dashboard() {
     },
   });
 
-  const summary: SummaryStats = useMemo(() => {
-    const raw =
-      (summaryResponse?.data as Record<string, unknown> | undefined)?.data ??
-      summaryResponse?.data ??
-      {};
-    return raw as SummaryStats;
-  }, [summaryResponse]);
+  const summary: StatsSummary | undefined = summaryResponse?.data.data;
 
   const completedSeries = useMemo(() => {
-    const raw =
-      (completedResponse?.data as Record<string, unknown> | undefined)?.data ??
-      completedResponse?.data ??
-      [];
-    if (!Array.isArray(raw)) return [];
-    return (raw as CompletedDayPoint[]).map((item, idx) => ({
-      label: item.label || item.date || `Day ${idx + 1}`,
-      completed: Number(item.completed ?? item.count ?? 0),
+    const points = completedResponse?.data.data.tasksCompletedPerDay ?? [];
+    return points.map((item) => ({
+      label: format(parseISO(item.date), 'MMM d'),
+      completed: item.count,
     }));
   }, [completedResponse]);
 
   const statusSeries = useMemo(() => {
-    const raw =
-      (statusResponse?.data as Record<string, unknown> | undefined)?.data ??
-      statusResponse?.data ??
-      [];
-    if (!Array.isArray(raw)) return [];
-    return (raw as StatusSlice[])
-      .map((item, idx) => ({
-        name: item.name || item.status || `Group ${idx + 1}`,
-        value: Number(item.value ?? item.count ?? 0),
+    const items = statusResponse?.data.data.tasksByStatus ?? [];
+    return items
+      .map((item) => ({
+        name: item.label,
+        value: item.count,
       }))
       .filter((item) => item.value > 0);
   }, [statusResponse]);
 
   const courseStudySeries = useMemo(() => {
-    const raw = (summaryResponse?.data as Record<string, unknown> | undefined)?.studyTimePerCourse;
-    if (!Array.isArray(raw)) return [];
-    return (raw as CourseStudyPoint[]).map((item, idx) => ({
-      course: item.courseName || item.name || `Course ${idx + 1}`,
-      minutes: Number(item.minutes ?? item.totalMinutes ?? (item.hours ? item.hours * 60 : 0)),
+    const items = summary?.studyTimePerCourse ?? [];
+    return items.map((item) => ({
+      course: item.courseName,
+      minutes: item.minutes,
     }));
-  }, [summaryResponse]);
+  }, [summary]);
 
   const upcomingTasks: Task[] = useMemo(() => {
-    const list: Task[] = deadlinesResponse?.data?.data ?? [];
+    const list: Task[] = deadlinesResponse?.data.data ?? [];
     return list.filter((t) => t.status !== 'done').slice(0, 6);
   }, [deadlinesResponse]);
 
@@ -346,10 +305,9 @@ export default function Dashboard() {
       setEditingTask(null);
     },
     onSubmit: handleDrawerSubmit,
-    courses,
-    isSubmitting: createMutation.isPending || updateMutation.isPending,
-    ...(editingTask ? { task: editingTask } : {}),
-  } as ComponentProps<typeof TaskDrawer>;
+    initialData: editingTask,
+    loading: createMutation.isPending || updateMutation.isPending,
+  };
 
   const greetingName = user?.name?.split(' ')[0] || 'there';
 
@@ -385,55 +343,53 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {summaryError && (
-        <div className="card p-4 text-sm text-red-600 dark:text-red-400">
-          Failed to load dashboard summary. Please refresh the page.
-        </div>
-      )}
-
       {summaryLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, idx) => (
             <div key={idx} className="card h-24 animate-pulse bg-gray-100 dark:bg-gray-800/70" />
           ))}
         </div>
+      ) : summaryError || !summary ? (
+        <div className="card p-4 text-sm text-red-600 dark:text-red-400" role="alert">
+          Failed to load dashboard summary. Please refresh the page.
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             title="Total Tasks"
-            value={Number(summary.totalTasks ?? 0)}
+            value={summary.totals.total}
             icon={<CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
             accentClass="bg-blue-50 dark:bg-blue-950/50"
             onClick={() => goToTasksFilter({})}
           />
           <StatCard
             title="Active"
-            value={Number(summary.activeTasks ?? 0)}
+            value={summary.totals.active}
             icon={<Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
             accentClass="bg-amber-50 dark:bg-amber-950/50"
-            onClick={() => goToTasksFilter({ status: 'in_progress' })}
+            onClick={() => goToTasksFilter({ status: 'active' })}
           />
           <StatCard
             title="Completed"
-            value={Number(summary.completedTasks ?? 0)}
+            value={summary.totals.completed}
             icon={<CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
             accentClass="bg-emerald-50 dark:bg-emerald-950/50"
             onClick={() => goToTasksFilter({ status: 'done' })}
           />
           <StatCard
             title="Overdue"
-            value={Number(summary.overdueTasks ?? 0)}
+            value={summary.totals.overdue}
             icon={<AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />}
             accentClass="bg-red-50 dark:bg-red-950/50"
             highlightAlert
-            onClick={() => goToTasksFilter({ due: 'overdue' })}
+            onClick={() => goToTasksFilter({ dueWindow: 'overdue' })}
           />
           <StatCard
             title="Due Today"
-            value={Number(summary.dueTodayTasks ?? 0)}
+            value={summary.totals.dueToday}
             icon={<CalendarClock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />}
             accentClass="bg-indigo-50 dark:bg-indigo-950/50"
-            onClick={() => goToTasksFilter({ due: 'today' })}
+            onClick={() => goToTasksFilter({ dueWindow: 'today' })}
           />
         </div>
       )}
@@ -507,6 +463,11 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          )}
+          {coursesError && (
+            <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
+              Course details could not be loaded.
+            </p>
           )}
         </div>
 
@@ -582,6 +543,10 @@ export default function Dashboard() {
                   className="h-14 rounded-lg bg-gray-100 dark:bg-gray-800/70 animate-pulse"
                 />
               ))}
+            </div>
+          ) : deadlinesError ? (
+            <div className="py-10 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+              Could not load upcoming deadlines. Please refresh the page.
             </div>
           ) : upcomingTasks.length === 0 ? (
             <div className="py-10 text-center space-y-2">
@@ -699,6 +664,10 @@ export default function Dashboard() {
 
           {summaryLoading ? (
             <ChartSkeleton />
+          ) : summaryError || !summary ? (
+            <div className="h-60 flex items-center justify-center text-sm text-red-600 dark:text-red-400" role="alert">
+              Could not load course study time.
+            </div>
           ) : courseStudySeries.length === 0 ? (
             <div className="h-60 flex flex-col items-center justify-center text-center gap-2">
               <p className="text-sm text-gray-500 dark:text-gray-400">

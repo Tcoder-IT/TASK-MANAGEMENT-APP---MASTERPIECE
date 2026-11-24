@@ -285,7 +285,7 @@ function TaskCount({ courseId }: { courseId: string }) {
     queryKey: ['task-count', courseId],
     queryFn: async () => {
       const res = await taskApi.list({ course: courseId, limit: 1 });
-      return res.data?.meta?.total ?? 0;
+      return res.data?.meta.total ?? 0;
     },
   });
   return data ?? 0;
