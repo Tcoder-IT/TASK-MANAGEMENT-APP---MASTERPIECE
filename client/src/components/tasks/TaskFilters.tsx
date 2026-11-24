@@ -99,8 +99,8 @@ export function TaskFilters({
   const courseOptions = useMemo(() => [
     { value: '', label: 'All Courses' },
     { value: 'null', label: 'No Course' },
-    ...(courses?.data?.map((c: Course) => ({ value: c._id, label: `${c.code ? `${c.code} - ` : ''}${c.name}` })) || []),
-  ], [courses?.data]);
+    ...(courses?.data.data?.map((c: Course) => ({ value: c._id, label: `${c.code ? `${c.code} - ` : ''}${c.name}` })) || []),
+  ], [courses?.data.data]);
 
   const form = useForm<FilterFormData>({
     resolver: zodResolver(filterSchema),

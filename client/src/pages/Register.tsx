@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from 'sonner';
+import { cn, getApiErrorMessage } from '@/lib/utils';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required').max(80, 'Name must be 80 characters or less'),
@@ -29,25 +30,21 @@ export default function Register() {
   const { register: registerUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const {
     register,
-    handleSubmit
+    handleSubmit,
+    formState: { errors, isSubmitting }
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema)
   });
 
   const onSubmit = async (data: RegisterForm) => {
-    setLoading(true);
     try {
       await registerUser({ name: data.name, email: data.email, password: data.password });
       navigate('/dashboard');
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Registration failed';
-      toast.error(message);
-    } finally {
-      setLoading(false);
+      toast.error(getApiErrorMessage(error, 'Registration failed'));
     }
   };
 
@@ -66,7 +63,7 @@ export default function Register() {
 
         <div className="card p-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-<div>
+            <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Full Name
               </label>
@@ -75,9 +72,12 @@ export default function Register() {
                 id="name"
                 type="text"
                 autoComplete="name"
-                className="input"
+                className={cn('input', errors.name && 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20')}
                 placeholder="John Doe"
+                aria-invalid={errors.name ? 'true' : 'false'}
+                aria-describedby={errors.name ? 'name-error' : undefined}
               />
+              {errors.name && <p id="name-error" className="mt-1.5 text-sm text-danger-600 dark:text-danger-400" role="alert">{errors.name.message}</p>}
             </div>
 
             <div>
@@ -89,9 +89,12 @@ export default function Register() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                className="input"
+                className={cn('input', errors.email && 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20')}
                 placeholder="you@example.com"
+                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={errors.email ? 'email-error' : undefined}
               />
+              {errors.email && <p id="email-error" className="mt-1.5 text-sm text-danger-600 dark:text-danger-400" role="alert">{errors.email.message}</p>}
             </div>
 
             <div>
@@ -104,8 +107,10 @@ export default function Register() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="input pr-12"
+                  className={cn('input pr-12', errors.password && 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20')}
                   placeholder="••••••••"
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                 <button
                   type="button"
@@ -116,6 +121,7 @@ export default function Register() {
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              {errors.password && <p id="password-error" className="mt-1.5 text-sm text-danger-600 dark:text-danger-400" role="alert">{errors.password.message}</p>}
             </div>
 
             <div>
@@ -128,8 +134,10 @@ export default function Register() {
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  className="input pr-12"
+                  className={cn('input pr-12', errors.confirmPassword && 'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20')}
                   placeholder="••••••••"
+                  aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                  aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
                 />
                 <button
                   type="button"
@@ -140,14 +148,16 @@ export default function Register() {
                   {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
+              {errors.confirmPassword && <p id="confirmPassword-error" className="mt-1.5 text-sm text-danger-600 dark:text-danger-400" role="alert">{errors.confirmPassword.message}</p>}
             </div>
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-3"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              className={cn('btn-primary w-full py-3', isSubmitting && 'opacity-50 cursor-not-allowed')}
             >
-              {loading ? (
+              {isSubmitting ? (
                 <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</>
               ) : (
                 'Create Account'

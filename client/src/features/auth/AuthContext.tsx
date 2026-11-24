@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const response = await authApi.getMe();
-      setUser(response.data);
+      setUser(response.data.data);
     } catch {
       setUser(null);
     } finally {
@@ -45,15 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: LoginCredentials) => {
     const response = await authApi.login(credentials);
-    setAccessToken(response.data.accessToken);
-    setUser(response.data.user);
+    setAccessToken(response.data.data.accessToken);
+    setUser(response.data.data.user);
     toast.success('Welcome back!');
   };
 
   const register = async (data: RegisterData) => {
     const response = await authApi.register(data);
-    setAccessToken(response.data.accessToken);
-    setUser(response.data.user);
+    setAccessToken(response.data.data.accessToken);
+    setUser(response.data.data.user);
     toast.success('Account created successfully!');
   };
 
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: UpdateProfileData) => {
     const response = await authApi.updateProfile(data);
-    setUser(response.data);
+    setUser(response.data.data);
     toast.success('Profile updated');
   };
 

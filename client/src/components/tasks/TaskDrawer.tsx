@@ -239,7 +239,7 @@ return (
               label="Course"
               options={[
                 { value: '', label: 'No Course' },
-                ...(courses?.data?.map(c => ({ value: c._id, label: `${c.code ? `${c.code} - ` : ''}${c.name}` })) || []),
+                ...(courses?.data.data?.map(c => ({ value: c._id, label: `${c.code ? `${c.code} - ` : ''}${c.name}` })) || []),
               ]}
               placeholder="Select course"
               error={form.formState.errors.course?.message}

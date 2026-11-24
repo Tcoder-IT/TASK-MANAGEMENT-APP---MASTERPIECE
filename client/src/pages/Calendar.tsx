@@ -62,7 +62,7 @@ export default function Calendar() {
   });
 
   const tasks: Task[] = tasksResponse?.data?.data ?? [];
-  const courses: Course[] = coursesResponse?.data ?? [];
+  const courses: Course[] = coursesResponse?.data.data ?? [];
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });

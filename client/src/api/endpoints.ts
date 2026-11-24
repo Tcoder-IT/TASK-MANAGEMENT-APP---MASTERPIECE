@@ -1,6 +1,7 @@
 import { api } from './client';
 import type {
   AuthResponse,
+  ApiResponse,
   User,
   LoginCredentials,
   RegisterData,
@@ -17,12 +18,12 @@ import type {
 } from '../types';
 
 export const authApi = {
-  register: (data: RegisterData) => api.post<AuthResponse>('/auth/register', data),
-  login: (data: LoginCredentials) => api.post<AuthResponse>('/auth/login', data),
+  register: (data: RegisterData) => api.post<ApiResponse<AuthResponse>>('/auth/register', data),
+  login: (data: LoginCredentials) => api.post<ApiResponse<AuthResponse>>('/auth/login', data),
   logout: () => api.post('/auth/logout'),
-  refresh: () => api.post<{ accessToken: string }>('/auth/refresh'),
-  getMe: () => api.get<User>('/auth/me'),
-  updateProfile: (data: UpdateProfileData) => api.patch<User>('/auth/me', data),
+  refresh: () => api.post<ApiResponse<{ accessToken: string }>>('/auth/refresh'),
+  getMe: () => api.get<ApiResponse<User>>('/auth/me'),
+  updateProfile: (data: UpdateProfileData) => api.patch<ApiResponse<User>>('/auth/me', data),
   changePassword: (data: ChangePasswordData) => api.patch('/auth/me/password', data),
   deleteAccount: () => api.delete('/auth/me'),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
@@ -30,7 +31,7 @@ export const authApi = {
 };
 
 export const courseApi = {
-  list: () => api.get<Course[]>('/courses'),
+  list: () => api.get<ApiResponse<Course[]>>('/courses'),
   create: (data: CreateCourseData) => api.post<Course>('/courses', data),
   get: (id: string) => api.get<Course>(`/courses/${id}`),
   update: (id: string, data: Partial<CreateCourseData>) => api.patch<Course>(`/courses/${id}`, data),

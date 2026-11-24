@@ -1,7 +1,18 @@
 import { clsx, type ClassValue } from 'clsx';
+import axios from 'axios';
+import type { ApiError } from '../types';
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError<ApiError>(error)) {
+    const message = error.response?.data?.message;
+    if (message) return message;
+  }
+
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions) {

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, getApiErrorMessage } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,26 +19,21 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors, isSubmitting }
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema)
   });
 
   const onSubmit = async (data: LoginForm) => {
-    setLoading(true);
     try {
       await login(data);
       navigate('/dashboard');
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Login failed';
-      toast.error(message);
-    } finally {
-      setLoading(false);
+      toast.error(getApiErrorMessage(error, 'Login failed'));
     }
   };
 
@@ -125,13 +120,14 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
               className={cn(
                 'btn-primary w-full py-3',
-                loading && 'opacity-50 cursor-not-allowed'
+                isSubmitting && 'opacity-50 cursor-not-allowed'
               )}
             >
-              {loading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                   Signing in...

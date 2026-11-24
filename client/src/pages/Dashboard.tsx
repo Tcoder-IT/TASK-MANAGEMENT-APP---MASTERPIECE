@@ -70,6 +70,7 @@ interface CourseStudyPoint {
 }
 
 const DONUT_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
+const EMPTY_COURSES: Course[] = [];
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -303,7 +304,7 @@ export default function Dashboard() {
     return list.filter((t) => t.status !== 'done').slice(0, 6);
   }, [deadlinesResponse]);
 
-  const courses: Course[] = coursesResponse?.data ?? [];
+  const courses: Course[] = coursesResponse?.data.data ?? EMPTY_COURSES;
   const courseMap = useMemo(() => {
     const map = new Map<string, Course>();
     courses.forEach((c) => map.set(c._id, c));

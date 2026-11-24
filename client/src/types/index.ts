@@ -110,6 +110,11 @@ export interface ApiError {
   errors?: { field: string; message: string }[];
 }
 
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;
