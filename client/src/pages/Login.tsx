@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { cn, getApiErrorMessage } from '@/lib/utils';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().trim().email('Invalid email address').toLowerCase(),
   password: z.string().min(1, 'Password is required')
 });
 
@@ -31,7 +31,7 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data);
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (error: unknown) {
       toast.error(getApiErrorMessage(error, 'Login failed'));
     }

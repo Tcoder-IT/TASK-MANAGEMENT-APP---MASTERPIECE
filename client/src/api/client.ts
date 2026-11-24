@@ -50,9 +50,19 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+    const isAuthenticationRequest = ['/auth/login', '/auth/register', '/auth/refresh'].some(
+      (endpoint) => originalRequest?.url?.endsWith(endpoint)
+    );
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthenticationRequest
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
